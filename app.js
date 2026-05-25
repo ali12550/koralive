@@ -242,7 +242,8 @@ function renderMatches(matches, filter = 'all') {
                 ⭐
             </button>
         </div>
-    `};
+    `;
+    }).join('');
     }).join('');
 }
 
