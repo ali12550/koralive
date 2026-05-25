@@ -1,274 +1,213 @@
 // ============ Configuration ============
-const FREE_APIS = {
-    FOOTBALL_DATA: 'https://api.football-data.org/v4',
-    THESPORTSDB: 'https://www.thesportsdb.com/api/v1/json/3',
+// TheSportsDB free tier — no API key required
+const API_BASE = 'https://www.thesportsdb.com/api/v1/json/3';
+
+// Short code → TheSportsDB league info
+const LEAGUE_MAP = {
+    PL:  { id: '4328', name: 'English Premier League' },
+    LA:  { id: '4335', name: 'Spanish La Liga'        },
+    SA:  { id: '4332', name: 'Italian Serie A'        },
+    BL1: { id: '4331', name: 'German Bundesliga'      },
+    FL1: { id: '4334', name: 'French Ligue 1'         },
 };
 
-// football-data.org requires a free API key — register at football-data.org
-// Paste your free key below (takes ~1 minute to get)
-const API_KEY = ''; // <-- paste your free key here
-const API_BASE = FREE_APIS.FOOTBALL_DATA;
+const CURRENT_SEASON = '2024-2025';
 
-// ============ State Management ============
+// ============ State ============
 let currentLanguage = 'ar';
 let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 let selectedDate = new Date().toISOString().split('T')[0];
-let allMatchesCache = [];
 
-// ============ Language Translations ============
+// ============ Translations ============
 const translations = {
     ar: {
         matches: 'المباريات',
         standings: 'الترتيب',
         favorites: 'المفضلة',
         loading: 'جاري التحميل...',
-        yesterday: 'أمس',
-        tomorrow: 'غدا',
-        allLeagues: 'جميع الدوريات',
         notStarted: 'لم تبدأ بعد',
         live: 'مباشر',
         finished: 'انتهت',
-        channel: 'القناة',
-        commentator: 'المعلق',
         goals: 'الأهداف',
-        cards: 'البطاقات',
         noMatches: 'لا توجد مباريات متاحة',
         noFavorites: 'لم تضف أي مباريات للمفضلة بعد',
-        apiKeyMissing: '⚠️ أضف مفتاح API في ملف app.js للحصول على بيانات حقيقية',
-        error: 'خطأ في تحميل البيانات',
     },
     en: {
         matches: 'Matches',
         standings: 'Standings',
         favorites: 'Favorites',
         loading: 'Loading...',
-        yesterday: 'Yesterday',
-        tomorrow: 'Tomorrow',
-        allLeagues: 'All Leagues',
         notStarted: 'Not Started',
         live: 'LIVE',
         finished: 'Finished',
-        channel: 'Channel',
-        commentator: 'Commentator',
         goals: 'Goals',
-        cards: 'Cards',
         noMatches: 'No matches available',
         noFavorites: 'No favorite matches added yet',
-        apiKeyMissing: '⚠️ Add your free API key in app.js to load real match data',
-        error: 'Error loading data',
     }
 };
+
+// ============ Data Normalization ============
+function getLeagueCode(leagueName) {
+    const entry = Object.entries(LEAGUE_MAP).find(([, v]) => v.name === leagueName);
+    return entry ? entry[0] : null;
+}
+
+function normalizeEvent(ev) {
+    const raw = ev.strStatus || '';
+    let status;
+    if (['Match Finished', 'FT', 'AET', 'AP'].includes(raw)) {
+        status = 'FINISHED';
+    } else if (['Not Started', '', 'NS'].includes(raw)) {
+        status = 'SCHEDULED';
+    } else {
+        status = 'IN_PLAY'; // 1H, HT, 2H, ET, etc.
+    }
+
+    const homeScore = ev.intHomeScore !== null && ev.intHomeScore !== '' ? parseInt(ev.intHomeScore) : null;
+    const awayScore = ev.intAwayScore !== null && ev.intAwayScore !== '' ? parseInt(ev.intAwayScore) : null;
+
+    return {
+        id: ev.idEvent,
+        status,
+        competition: { name: ev.strLeague, code: getLeagueCode(ev.strLeague) },
+        homeTeam: { name: ev.strHomeTeam, crest: ev.strHomeTeamBadge },
+        awayTeam: { name: ev.strAwayTeam, crest: ev.strAwayTeamBadge },
+        score: { fullTime: { home: homeScore, away: awayScore } },
+        utcDate: `${ev.dateEvent}T${ev.strTime || '00:00:00'}Z`,
+    };
+}
+
+function normalizeTableRow(t) {
+    return {
+        position: parseInt(t.intRank) || 0,
+        team: { name: t.strTeam, crest: t.strTeamBadge },
+        playedGames: parseInt(t.intPlayed) || 0,
+        won: parseInt(t.intWin) || 0,
+        draw: parseInt(t.intDraw) || 0,
+        lost: parseInt(t.intLoss) || 0,
+        goalsFor: parseInt(t.intGoalsFor) || 0,
+        goalsAgainst: parseInt(t.intGoalsAgainst) || 0,
+        points: parseInt(t.intPoints) || 0,
+    };
+}
 
 // ============ API Functions ============
 async function fetchMatches(date) {
     try {
         showLoading(true);
-
-        if (!API_KEY) {
-            // No key — try TheSportsDB fallback immediately
-            return await fetchMatchesAlternate(date);
-        }
-
-        const response = await fetch(
-            `${API_BASE}/matches?dateFrom=${date}&dateTo=${date}`,
-            {
-                headers: { 'X-Auth-Token': API_KEY }
-            }
-        );
-
-        if (!response.ok) {
-            console.warn('football-data.org failed:', response.status);
-            return await fetchMatchesAlternate(date);
-        }
-
+        const response = await fetch(`${API_BASE}/eventsday.php?d=${date}&s=Soccer`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        const matches = data.matches || [];
-
-        if (matches.length > 0) cacheMatchData(date, matches);
-        return matches;
-
+        const events = (data.events || []).map(normalizeEvent);
+        if (events.length > 0) cacheMatchData(date, events);
+        return events;
     } catch (error) {
         console.error('Error fetching matches:', error);
-        return await fetchMatchesAlternate(date);
+        showNotification('⚠️ Using cached data');
+        return getLocalCacheData(date);
     } finally {
         showLoading(false);
     }
 }
 
-// Fallback: TheSportsDB (no auth needed, free forever)
-async function fetchMatchesAlternate(date) {
-    try {
-        // TheSportsDB: fetch events by date for major leagues
-        const response = await fetch(
-            `${FREE_APIS.THESPORTSDB}/eventsday.php?d=${date}&s=Soccer`
-        );
-
-        if (!response.ok) throw new Error('TheSportsDB failed');
-
-        const data = await response.json();
-        const events = data.events || [];
-
-        // Normalise TheSportsDB schema → internal schema
-        return events.map(e => ({
-            id: e.idEvent,
-            competition: { name: e.strLeague, code: e.idLeague },
-            homeTeam: { name: e.strHomeTeam, crest: e.strHomeTeamBadge || null },
-            awayTeam: { name: e.strAwayTeam, crest: e.strAwayTeamBadge || null },
-            status: e.strStatus === 'Match Finished' ? 'FINISHED'
-                  : e.strStatus === 'In Progress'   ? 'IN_PLAY'
-                  : 'SCHEDULED',
-            utcDate: e.dateEvent + 'T' + (e.strTime || '00:00:00') + 'Z',
-            score: {
-                fullTime: {
-                    home: e.intHomeScore !== null ? parseInt(e.intHomeScore) : null,
-                    away: e.intAwayScore !== null ? parseInt(e.intAwayScore) : null,
-                }
-            }
-        }));
-
-    } catch (error) {
-        console.error('TheSportsDB also failed:', error);
-        showNotification(getTranslation('apiKeyMissing'));
-        return getLocalCacheData(date);
-    }
-}
-
-async function fetchStandings(leagueId) {
+async function fetchStandings(leagueCode) {
     try {
         showLoading(true);
-
-        if (!API_KEY) {
-            showNotification(getTranslation('apiKeyMissing'));
-            return [];
-        }
-
-        const response = await fetch(
-            `${API_BASE}/competitions/${leagueId}/standings`,
-            { headers: { 'X-Auth-Token': API_KEY } }
-        );
-
-        if (!response.ok) throw new Error('Standings fetch failed: ' + response.status);
+        const league = LEAGUE_MAP[leagueCode];
+        if (!league) return [];
+        const response = await fetch(`${API_BASE}/lookuptable.php?l=${league.id}&s=${CURRENT_SEASON}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        return data.standings?.[0]?.table || [];
-
+        return (data.table || []).map(normalizeTableRow);
     } catch (error) {
         console.error('Error fetching standings:', error);
-        showNotification(getTranslation('error'));
+        showNotification('خطأ في تحميل الترتيب / Error loading standings');
         return [];
     } finally {
         showLoading(false);
     }
 }
 
-async function fetchMatchDetails(matchId) {
+async function fetchMatchDetails(eventId) {
     try {
-        if (!API_KEY) return null;
-
-        const response = await fetch(
-            `${API_BASE}/matches/${matchId}`,
-            { headers: { 'X-Auth-Token': API_KEY } }
-        );
-
-        if (!response.ok) throw new Error('Match details failed');
+        const response = await fetch(`${API_BASE}/lookupevent.php?id=${eventId}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        // football-data.org wraps in { match: ... } OR returns root object
-        return data.match || data || null;
-
+        const events = data.events || [];
+        return events.length > 0 ? normalizeEvent(events[0]) : null;
     } catch (error) {
         console.error('Error fetching match details:', error);
         return null;
     }
 }
 
-// ============ Local Cache ============
+// ============ Cache ============
 function getLocalCacheData(date) {
-    try {
-        const cached = localStorage.getItem(`matches_${date}`);
-        return cached ? JSON.parse(cached) : [];
-    } catch { return []; }
+    const cached = localStorage.getItem(`matches_${date}`);
+    return cached ? JSON.parse(cached) : [];
 }
 
 function cacheMatchData(date, data) {
-    try {
-        localStorage.setItem(`matches_${date}`, JSON.stringify(data));
-    } catch {}
+    localStorage.setItem(`matches_${date}`, JSON.stringify(data));
 }
 
 // ============ UI Rendering ============
-function renderMatches(matches, filter) {
+function renderMatches(matches, filter = 'all') {
     const container = document.getElementById('matches-container');
-    allMatchesCache = matches;
 
     if (!matches || matches.length === 0) {
         container.innerHTML = `<div class="favorite-empty">${getTranslation('noMatches')}</div>`;
         return;
     }
 
-    let filtered = matches;
-    if (filter && filter !== 'all') {
-        filtered = matches.filter(m =>
-            m.competition?.code === filter ||
-            String(m.competition?.id) === String(filter)
-        );
-    }
+    const filteredMatches = filter === 'all' ? matches : matches.filter(m => {
+        const leagueInfo = LEAGUE_MAP[filter];
+        return m.competition?.code === filter || m.competition?.name === leagueInfo?.name;
+    });
 
-    if (filtered.length === 0) {
+    if (filteredMatches.length === 0) {
         container.innerHTML = `<div class="favorite-empty">${getTranslation('noMatches')}</div>`;
         return;
     }
 
-    // FIX: single .join('') — the original had two closing brackets causing a syntax crash
-    container.innerHTML = filtered.map(match => {
-        const homeTeam = match.homeTeam;
-        const awayTeam = match.awayTeam;
-        const matchId  = match.id;
-        const homeScore = match.score?.fullTime?.home;
-        const awayScore = match.score?.fullTime?.away;
-        const scoreDisplay = (homeScore !== null && homeScore !== undefined &&
-                              awayScore !== null && awayScore !== undefined)
-            ? `${homeScore} - ${awayScore}`
-            : '-';
+    container.innerHTML = filteredMatches.map(match => {
+        const matchId = match.id;
+        const score = match.score?.fullTime;
+        const hasScore = score?.home !== null && score?.away !== null;
 
         return `
-        <div class="match-card" onclick="showMatchDetails(${matchId})">
+        <div class="match-card" onclick="showMatchDetails('${matchId}')">
             <div class="match-status ${getMatchStatusClass(match)}">
                 ${getMatchStatus(match)}
             </div>
-            <div class="match-league">${match.competition?.name || 'Unknown League'}</div>
-
+            <div class="match-league">${match.competition?.name || ''}</div>
             <div class="match-score">
                 <div class="team">
                     <div class="team-logo">
-                        ${homeTeam?.crest
-                            ? `<img src="${homeTeam.crest}" alt="${homeTeam.name}" onerror="this.style.display='none'">`
+                        ${match.homeTeam?.crest
+                            ? `<img src="${match.homeTeam.crest}" alt="${match.homeTeam.name}" onerror="this.parentNode.innerHTML='🏠'">`
                             : '<span>🏠</span>'}
                     </div>
-                    <div class="team-name">${homeTeam?.name || homeTeam?.shortName || 'TBD'}</div>
+                    <div class="team-name">${match.homeTeam?.name || 'TBD'}</div>
                 </div>
-
-                <div class="score">${scoreDisplay}</div>
-
+                <div class="score">${hasScore ? `${score.home} - ${score.away}` : '-'}</div>
                 <div class="team">
                     <div class="team-logo">
-                        ${awayTeam?.crest
-                            ? `<img src="${awayTeam.crest}" alt="${awayTeam.name}" onerror="this.style.display='none'">`
+                        ${match.awayTeam?.crest
+                            ? `<img src="${match.awayTeam.crest}" alt="${match.awayTeam.name}" onerror="this.parentNode.innerHTML='✈️'">`
                             : '<span>✈️</span>'}
                     </div>
-                    <div class="team-name">${awayTeam?.name || awayTeam?.shortName || 'TBD'}</div>
+                    <div class="team-name">${match.awayTeam?.name || 'TBD'}</div>
                 </div>
             </div>
-
             <div class="match-time">
-                ${new Date(match.utcDate).toLocaleTimeString(
-                    currentLanguage === 'ar' ? 'ar-EG' : 'en-GB',
-                    { hour: '2-digit', minute: '2-digit' }
-                )}
+                ${new Date(match.utcDate).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
             </div>
-
+            <div class="match-channel">⚽ ${getMatchStatus(match)}</div>
             <button class="star-btn ${favorites.includes(matchId) ? 'active' : ''}"
-                    onclick="toggleFavorite(event, ${matchId})">⭐</button>
+                    onclick="toggleFavorite(event, '${matchId}')">⭐</button>
         </div>`;
-    }).join('');   // FIX: only ONE .join('') here
+    }).join('');
 }
 
 function renderStandings(standings) {
@@ -279,44 +218,35 @@ function renderStandings(standings) {
         return;
     }
 
-    const headers = currentLanguage === 'ar'
-        ? ['الترتيب', 'الفريق', 'اللعب', 'الفوز', 'التعادل', 'الخسارة', 'فارق الأهداف', 'النقاط']
+    const headerText = currentLanguage === 'ar'
+        ? ['الترتيب', 'الفريق', 'اللعب', 'الفوز', 'التعادل', 'الخسارة', 'الأهداف', 'النقاط']
         : ['Pos', 'Team', 'P', 'W', 'D', 'L', 'GD', 'Pts'];
 
     container.innerHTML = `
         <table>
-            <thead>
-                <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-            </thead>
+            <thead><tr>${headerText.map(h => `<th>${h}</th>`).join('')}</tr></thead>
             <tbody>
-                ${standings.map(team => {
-                    const gf = team.goalsFor  ?? 0;
-                    const ga = team.goalsAgainst ?? 0;
-                    return `
+                ${standings.map(team => `
                     <tr>
                         <td>${team.position}</td>
                         <td>
                             <div class="team-cell">
-                                ${team.team?.crest
-                                    ? `<img src="${team.team.crest}" alt="${team.team.name}" style="width:20px;margin-right:6px;" onerror="this.style.display='none'">`
-                                    : ''}
-                                ${team.team?.name || team.name}
+                                ${team.team?.crest ? `<img src="${team.team.crest}" alt="${team.team.name}">` : ''}
+                                ${team.team?.name || ''}
                             </div>
                         </td>
-                        <td>${team.playedGames ?? '-'}</td>
-                        <td>${team.won ?? '-'}</td>
-                        <td>${team.draw ?? '-'}</td>
-                        <td>${team.lost ?? '-'}</td>
-                        <td>${gf - ga}</td>
+                        <td>${team.playedGames}</td>
+                        <td>${team.won}</td>
+                        <td>${team.draw}</td>
+                        <td>${team.lost}</td>
+                        <td>${team.goalsFor - team.goalsAgainst}</td>
                         <td><strong>${team.points}</strong></td>
-                    </tr>`;
-                }).join('')}
+                    </tr>`).join('')}
             </tbody>
         </table>`;
 }
 
-// FIX: renderFavorites — was using m.fixture.id, API returns m.id
-function renderFavorites() {
+function renderFavorites(allMatches) {
     const container = document.getElementById('favorites-container');
 
     if (favorites.length === 0) {
@@ -324,104 +254,87 @@ function renderFavorites() {
         return;
     }
 
-    const favMatches = allMatchesCache.filter(m => favorites.includes(m.id));
+    const favoriteMatches = allMatches.filter(m => favorites.includes(m.id));
 
-    if (favMatches.length === 0) {
+    if (favoriteMatches.length === 0) {
         container.innerHTML = `<div class="favorite-empty">${getTranslation('noFavorites')}</div>`;
         return;
     }
 
-    renderMatches(favMatches, 'all');
+    renderMatches(favoriteMatches);
 }
 
 // ============ Match Details Modal ============
-// FIX: uses football-data.org schema (homeTeam/awayTeam/score) not RapidAPI schema
-async function showMatchDetails(matchId) {
-    const modal    = document.getElementById('matchModal');
+async function showMatchDetails(eventId) {
+    const modal = document.getElementById('matchModal');
     const modalBody = document.getElementById('modalBody');
 
-    // Try to get from cache first
-    let match = allMatchesCache.find(m => m.id == matchId) || null;
-
-    if (!match && API_KEY) {
-        showLoading(true);
-        match = await fetchMatchDetails(matchId);
-        showLoading(false);
-    }
+    showLoading(true);
+    const match = await fetchMatchDetails(eventId);
+    showLoading(false);
 
     if (!match) {
-        showNotification(getTranslation('error'));
+        showNotification('Unable to load match details');
         return;
     }
 
-    const homeTeam  = match.homeTeam;
-    const awayTeam  = match.awayTeam;
-    const homeScore = match.score?.fullTime?.home;
-    const awayScore = match.score?.fullTime?.away;
-    const scoreStr  = (homeScore !== null && homeScore !== undefined &&
-                       awayScore !== null && awayScore !== undefined)
-        ? `${homeScore} - ${awayScore}` : '-';
+    const score = match.score?.fullTime;
+    const hasScore = score?.home !== null && score?.away !== null;
 
     modalBody.innerHTML = `
         <div class="modal-header">
             <h2>${match.competition?.name || ''}</h2>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
                 <div style="text-align:center;">
-                    ${homeTeam?.crest
-                        ? `<img src="${homeTeam.crest}" alt="${homeTeam.name}" style="width:60px;margin-bottom:10px;" onerror="this.style.display='none'">`
-                        : '<span style="font-size:40px;">🏠</span>'}
-                    <div>${homeTeam?.name || 'Home'}</div>
+                    ${match.homeTeam?.crest
+                        ? `<img src="${match.homeTeam.crest}" alt="${match.homeTeam.name}" style="width:60px; margin-bottom:10px;">`
+                        : ''}
+                    <div>${match.homeTeam?.name || ''}</div>
                 </div>
-                <div class="modal-score">${scoreStr}</div>
+                <div class="modal-score">${hasScore ? `${score.home} - ${score.away}` : '-'}</div>
                 <div style="text-align:center;">
-                    ${awayTeam?.crest
-                        ? `<img src="${awayTeam.crest}" alt="${awayTeam.name}" style="width:60px;margin-bottom:10px;" onerror="this.style.display='none'">`
-                        : '<span style="font-size:40px;">✈️</span>'}
-                    <div>${awayTeam?.name || 'Away'}</div>
+                    ${match.awayTeam?.crest
+                        ? `<img src="${match.awayTeam.crest}" alt="${match.awayTeam.name}" style="width:60px; margin-bottom:10px;">`
+                        : ''}
+                    <div>${match.awayTeam?.name || ''}</div>
                 </div>
             </div>
-            <div style="margin-top:10px;font-size:14px;color:#4f9cff;">
+            <div style="margin-top:10px; font-size:14px; color:#4f9cff;">
                 ${getMatchStatus(match)}
             </div>
         </div>
-        <div class="match-stats" style="margin-top:20px;">
+        <div class="match-stats">
+            <h3>${getTranslation('goals')}</h3>
             <div class="stats-row">
-                <span>${currentLanguage === 'ar' ? 'الحالة' : 'Status'}</span>
-                <span>${getMatchStatus(match)}</span>
+                <span>${match.homeTeam?.name || ''}</span>
+                <span>${hasScore ? score.home : '-'}</span>
             </div>
             <div class="stats-row">
-                <span>${currentLanguage === 'ar' ? 'الدوري' : 'Competition'}</span>
-                <span>${match.competition?.name || '-'}</span>
-            </div>
-            <div class="stats-row">
-                <span>${currentLanguage === 'ar' ? 'الوقت' : 'Time'}</span>
-                <span>${new Date(match.utcDate).toLocaleTimeString(
-                    currentLanguage === 'ar' ? 'ar-EG' : 'en-GB',
-                    { hour: '2-digit', minute: '2-digit' }
-                )}</span>
+                <span>${match.awayTeam?.name || ''}</span>
+                <span>${hasScore ? score.away : '-'}</span>
             </div>
         </div>`;
 
     modal.classList.add('active');
 }
 
-// ============ Helper Functions ============
+// ============ Helpers ============
 function getMatchStatus(match) {
     const statusMap = {
-        'SCHEDULED': getTranslation('notStarted'),
-        'TIMED':     getTranslation('notStarted'),
-        'IN_PLAY':   getTranslation('live'),
-        'PAUSED':    getTranslation('live'),
-        'FINISHED':  getTranslation('finished'),
-        'POSTPONED': 'Postponed',
-        'CANCELLED': 'Cancelled',
-        'SUSPENDED': 'Suspended',
+        SCHEDULED: getTranslation('notStarted'),
+        IN_PLAY:   getTranslation('live'),
+        PAUSED:    getTranslation('live'),
+        LIVE:      getTranslation('live'),
+        FINISHED:  getTranslation('finished'),
+        POSTPONED: 'Postponed',
+        CANCELLED: 'Cancelled',
+        SUSPENDED: 'Suspended',
     };
-    return statusMap[match.status] || match.status || '-';
+    return statusMap[match.status] || match.status || '';
 }
 
 function getMatchStatusClass(match) {
-    if (['IN_PLAY', 'PAUSED'].includes(match.status)) return 'live';
+    if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(match.status)) return 'live';
     if (match.status === 'FINISHED') return 'finished';
     return 'upcoming';
 }
@@ -435,14 +348,16 @@ function showLoading(show) {
 }
 
 function showNotification(message) {
-    const el = document.createElement('div');
-    el.textContent = message;
-    el.style.cssText = 'position:fixed;top:20px;right:20px;background:rgba(255,69,0,0.92);color:white;padding:14px 20px;border-radius:8px;z-index:2000;font-size:14px;max-width:320px;';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 4000);
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position:fixed; top:20px; right:20px;
+        background:rgba(255,69,0,0.9); color:#fff;
+        padding:15px 20px; border-radius:6px; z-index:2000;`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
 }
 
-// FIX: toggleFavorite — was using fixtureId from wrong schema; now uses m.id consistently
 function toggleFavorite(e, matchId) {
     e.stopPropagation();
     const idx = favorites.indexOf(matchId);
@@ -459,15 +374,17 @@ function switchLanguage() {
     currentLanguage = currentLanguage === 'ar' ? 'en' : 'ar';
     const html = document.documentElement;
     html.lang = currentLanguage;
-    html.dir  = currentLanguage === 'ar' ? 'rtl' : 'ltr';
+    html.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr';
     document.getElementById('langBtn').textContent = currentLanguage === 'ar' ? 'English' : 'العربية';
 
     document.querySelectorAll('.ar, .en').forEach(el => {
-        el.style.display = el.classList.contains(currentLanguage) ? 'inline' : 'none';
+        el.style.display =
+            (el.classList.contains('ar') && currentLanguage === 'ar') ||
+            (el.classList.contains('en') && currentLanguage === 'en')
+                ? 'inline' : 'none';
     });
 
-    const activeTab = document.querySelector('.nav-btn.active');
-    if (activeTab) activeTab.click();
+    document.querySelector('.nav-btn.active')?.click();
 }
 
 // ============ Date Navigation ============
@@ -485,7 +402,7 @@ function changeDate(days) {
 
 async function loadMatchesForSelectedDate() {
     const matches = await fetchMatches(selectedDate);
-    const filter  = document.getElementById('leagueFilter').value;
+    const filter = document.getElementById('leagueFilter').value;
     renderMatches(matches, filter);
 }
 
@@ -495,13 +412,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('langBtn').addEventListener('click', switchLanguage);
 
-    document.getElementById('refreshBtn').addEventListener('click', loadMatchesForSelectedDate);
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+        await loadMatchesForSelectedDate();
+    });
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', async function () {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-
             this.classList.add('active');
             const tab = this.dataset.tab;
             document.getElementById(`${tab}-tab`).classList.add('active');
@@ -512,7 +430,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const league = document.getElementById('standingsLeague').value;
                 renderStandings(await fetchStandings(league));
             } else if (tab === 'favorites') {
-                renderFavorites();
+                const matches = await fetchMatches(selectedDate);
+                renderFavorites(matches);
             }
         });
     });
@@ -524,30 +443,30 @@ document.addEventListener('DOMContentLoaded', function () {
         loadMatchesForSelectedDate();
     });
 
-    document.getElementById('leagueFilter').addEventListener('change', function () {
-        renderMatches(allMatchesCache, this.value);
+    document.getElementById('leagueFilter').addEventListener('change', async function () {
+        const matches = await fetchMatches(selectedDate);
+        renderMatches(matches, this.value);
     });
 
     document.getElementById('standingsLeague').addEventListener('change', async function () {
         renderStandings(await fetchStandings(this.value));
     });
 
-    document.querySelector('.close').addEventListener('click', () => {
+    document.querySelector('.close').addEventListener('click', function () {
         document.getElementById('matchModal').classList.remove('active');
     });
 
-    window.addEventListener('click', e => {
+    window.addEventListener('click', function (e) {
         const modal = document.getElementById('matchModal');
         if (e.target === modal) modal.classList.remove('active');
     });
 
-    // Initial load
     loadMatchesForSelectedDate();
 
-    // Auto-refresh every 30s when on matches tab
+    // Auto-refresh every 60 seconds when on matches tab
     setInterval(() => {
         if (document.querySelector('.nav-btn.active')?.dataset.tab === 'matches') {
             loadMatchesForSelectedDate();
         }
-    }, 30000);
+    }, 60000);
 });
