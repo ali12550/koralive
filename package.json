@@ -1,0 +1,45 @@
+{
+  "name": "kora-live-scorer",
+  "version": "1.0.0",
+  "description": "⚽ Modern bilingual (Arabic/English) live football scoring web application with real-time updates",
+  "main": "app.js",
+  "scripts": {
+    "serve": "python -m http.server 8000",
+    "serve-windows": "python -m http.server 8000",
+    "serve-mac": "python3 -m http.server 8000",
+    "dev": "npx http-server -p 8000",
+    "build": "echo 'No build required - static files only'",
+    "test": "echo 'Manual testing required'"
+  },
+  "keywords": [
+    "football",
+    "live-scores",
+    "sports",
+    "arabic",
+    "bilingual",
+    "real-time",
+    "web-app",
+    "api-football"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/kora-live"
+  },
+  "devDependencies": {},
+  "dependencies": {},
+  "engines": {
+    "node": ">=12.0.0",
+    "python": ">=3.6"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "> 1%",
+    "not dead"
+  ],
+  "social": {
+    "twitter": "@yourusername",
+    "facebook": "yourpage"
+  }
+}

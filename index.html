@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كورة لايف - Kora Live Score</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>⚽ كورة لايف</h1>
+                <p>Kora Live Score</p>
+            </div>
+            <div class="controls">
+                <button id="langBtn" class="lang-btn">English</button>
+                <button id="refreshBtn" class="refresh-btn">🔄 تحديث</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <button class="nav-btn active" data-tab="matches">
+            <span class="ar">المباريات</span>
+            <span class="en" style="display:none;">Matches</span>
+        </button>
+        <button class="nav-btn" data-tab="standings">
+            <span class="ar">الترتيب</span>
+            <span class="en" style="display:none;">Standings</span>
+        </button>
+        <button class="nav-btn" data-tab="favorites">
+            <span class="ar">المفضلة</span>
+            <span class="en" style="display:none;">Favorites</span>
+        </button>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Loading Spinner -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p><span class="ar">جاري التحميل...</span><span class="en" style="display:none;">Loading...</span></p>
+        </div>
+
+        <!-- Matches Tab -->
+        <section id="matches-tab" class="tab-content active">
+            <div class="filters">
+                <select id="leagueFilter" class="filter-select">
+                    <option value="all"><span class="ar">جميع الدوريات</span><span class="en" style="display:none;">All Leagues</span></option>
+                    <option value="PL">Premier League</option>
+                    <option value="LA">La Liga</option>
+                    <option value="SA">Serie A</option>
+                    <option value="BL1">Bundesliga</option>
+                    <option value="FL1">Ligue 1</option>
+                </select>
+            </div>
+
+            <!-- Date Navigation -->
+            <div class="date-nav">
+                <button id="prevDay" class="date-btn">← أمس</button>
+                <input type="date" id="selectedDate" class="date-input">
+                <button id="nextDay" class="date-btn">غدا →</button>
+            </div>
+
+            <!-- Matches Container -->
+            <div id="matches-container" class="matches-container"></div>
+        </section>
+
+        <!-- Standings Tab -->
+        <section id="standings-tab" class="tab-content">
+            <select id="standingsLeague" class="filter-select">
+                <option value="PL">Premier League</option>
+                <option value="LA">La Liga</option>
+                <option value="SA">Serie A</option>
+                <option value="BL1">Bundesliga</option>
+                <option value="FL1">Ligue 1</option>
+            </select>
+            <div id="standings-container" class="standings-container"></div>
+        </section>
+
+        <!-- Favorites Tab -->
+        <section id="favorites-tab" class="tab-content">
+            <div id="favorites-container" class="favorites-container"></div>
+        </section>
+    </main>
+
+    <!-- Match Detail Modal -->
+    <div id="matchModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

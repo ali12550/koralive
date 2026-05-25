@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دليل البدء - Kora Live Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            color: #f0f0f0;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #2d5aa8 0%, #1e40af 100%);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(45, 93, 168, 0.8);
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #fff;
+            border: 2px solid #4f9cff;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-switch:hover {
+            background: rgba(45, 93, 168, 1);
+        }
+        
+        .section {
+            background: rgba(45, 93, 168, 0.15);
+            border: 2px solid rgba(79, 156, 255, 0.3);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .section h2 {
+            color: #4f9cff;
+            margin-bottom: 15px;
+            font-size: 22px;
+            border-bottom: 2px solid rgba(79, 156, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .section h3 {
+            color: #b0d4ff;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4f9cff;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #4f9cff;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #4f9cff;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #4f9cff;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .success {
+            background: rgba(100, 200, 100, 0.1);
+            border-left-color: #64c864;
+            color: #64c864;
+        }
+        
+        .warning {
+            background: rgba(255, 150, 0, 0.1);
+            border-left-color: #ff9600;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2d5aa8 0%, #1e40af 100%);
+            color: #fff;
+            padding: 12px 25px;
+            border: 2px solid #4f9cff;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin: 10px 5px 10px 0;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 156, 255, 0.3);
+        }
+        
+        .button.secondary {
+            background: rgba(45, 93, 168, 0.2);
+            border-color: #4f9cff;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid rgba(79, 156, 255, 0.2);
+        }
+        
+        th {
+            background: rgba(45, 93, 168, 0.3);
+            color: #4f9cff;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: rgba(79, 156, 255, 0.1);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #b0b0b0;
+            border-top: 1px solid rgba(79, 156, 255, 0.2);
+        }
+        
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4f9cff, #2d5aa8);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 5px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .en-content {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+            
+            .lang-switch {
+                position: static;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="lang-switch" onclick="toggleLanguage()">
+        <span class="ar">English</span>
+        <span class="en" style="display:none;">العربية</span>
+    </button>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚽ <span class="ar">كورة لايف</span><span class="en" style="display:none;">Kora Live</span></h1>
+            <p><span class="ar">أداة البث المباشر للمباريات</span><span class="en" style="display:none;">Live Football Scoring Tool</span></p>
+        </div>
+
+        <!-- Step 1: API Key -->
+        <div class="section">
+            <h2>
+                <span class="step-number">1</span>
+                <span class="ar">احصل على مفتاح API</span>
+                <span class="en" style="display:none;">Get API Key</span>
+            </h2>
+            
+            <div class="step">
+                <strong><span class="ar">زيارة RapidAPI</span><span class="en" style="display:none;">Visit RapidAPI</span></strong>
+                <div class="code">https://rapidapi.com</div>
+            </div>
+            
+            <div class="step">
+                <strong><span class="ar">اختر API-Football</span><span class="en" style="display:none;">Choose API-Football</span></strong>
+                <p><span class="ar">ابحث عن "API-Football" واختر الخطة المجانية</span><span class="en" style="display:none;">Search for "API-Football" and select the free plan</span></p>
+            </div>
+            
+            <div class="step">
+                <strong><span class="ar">انسخ مفتاح API</span><span class="en" style="display:none;">Copy Your API Key</span></strong>
+                <p><span class="ar">انسخ قيمة X-RapidAPI-Key من صفحة المفاتيح</span><span class="en" style="display:none;">Copy the X-RapidAPI-Key value from the keys page</span></p>
+            </div>
+        </div>
+
+        <!-- Step 2: Add Key -->
+        <div class="section">
+            <h2>
+                <span class="step-number">2</span>
+                <span class="ar">أضف المفتاح إلى المشروع</span>
+                <span class="en" style="display:none;">Add Key to Project</span>
+            </h2>
+            
+            <h3><span class="ar">افتح الملف: app.js</span><span class="en" style="display:none;">Open file: app.js</span></h3>
+            <p><span class="ar">ابحث عن السطر 2 وقم بالتعديل:</span><span class="en" style="display:none;">Find line 2 and edit:</span></p>
+            
+            <div class="code">
+const API_KEY = 'YOUR_API_KEY_HERE';
+            </div>
+            
+            <div class="step warning">
+                <strong>⚠️ <span class="ar">تنبيه</span><span class="en" style="display:none;">Warning</span></strong>
+                <p><span class="ar">استبدل YOUR_API_KEY_HERE بمفتاحك الفعلي</span><span class="en" style="display:none;">Replace YOUR_API_KEY_HERE with your actual key</span></p>
+            </div>
+        </div>
+
+        <!-- Step 3: Start Server -->
+        <div class="section">
+            <h2>
+                <span class="step-number">3</span>
+                <span class="ar">ابدأ الخادم المحلي</span>
+                <span class="en" style="display:none;">Start Local Server</span>
+            </h2>
+            
+            <h3>Windows:</h3>
+            <div class="step">
+                <p><span class="ar">افتح PowerShell في مجلد المشروع واكتب:</span><span class="en" style="display:none;">Open PowerShell in project folder and type:</span></p>
+                <div class="code">python -m http.server 8000</div>
+            </div>
+            
+            <h3>Mac / Linux:</h3>
+            <div class="step">
+                <p><span class="ar">افتح Terminal واكتب:</span><span class="en" style="display:none;">Open Terminal and type:</span></p>
+                <div class="code">python3 -m http.server 8000</div>
+            </div>
+            
+            <div class="step success">
+                <strong>✅ <span class="ar">النجاح</span><span class="en" style="display:none;">Success</span></strong>
+                <p><span class="ar">سترى: "Serving HTTP on 0.0.0.0 port 8000"</span><span class="en" style="display:none;">You should see: "Serving HTTP on 0.0.0.0 port 8000"</span></p>
+            </div>
+        </div>
+
+        <!-- Step 4: Open -->
+        <div class="section">
+            <h2>
+                <span class="step-number">4</span>
+                <span class="ar">افتح في المتصفح</span>
+                <span class="en" style="display:none;">Open in Browser</span>
+            </h2>
+            
+            <div class="code">http://localhost:8000</div>
+            
+            <div class="step success">
+                <strong>✅ <span class="ar">تم!</span><span class="en" style="display:none;">Done!</span></strong>
+                <p><span class="ar">يجب أن ترى الآن التطبيق وهو يعمل بكامل طاقته</span><span class="en" style="display:none;">You should now see the app running with live scores</span></p>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="section">
+            <h2>⭐ <span class="ar">الميزات الرئيسية</span><span class="en" style="display:none;">Main Features</span></h2>
+            
+            <table>
+                <tr>
+                    <th><span class="ar">الميزة</span><span class="en" style="display:none;">Feature</span></th>
+                    <th><span class="ar">الوصف</span><span class="en" style="display:none;">Description</span></th>
+                </tr>
+                <tr>
+                    <td>⚽ <span class="ar">النتائج المباشرة</span><span class="en" style="display:none;">Live Scores</span></td>
+                    <td><span class="ar">تحديثات فورية للمباريات</span><span class="en" style="display:none;">Real-time match updates</span></td>
+                </tr>
+                <tr>
+                    <td>📊 <span class="ar">الترتيب</span><span class="en" style="display:none;">Standings</span></td>
+                    <td><span class="ar">جداول الدوريات والإحصائيات</span><span class="en" style="display:none;">League tables and stats</span></td>
+                </tr>
+                <tr>
+                    <td>⭐ <span class="ar">المفضلة</span><span class="en" style="display:none;">Favorites</span></td>
+                    <td><span class="ar">احفظ المباريات المفضلة لديك</span><span class="en" style="display:none;">Save your favorite matches</span></td>
+                </tr>
+                <tr>
+                    <td>🌐 <span class="ar">ثنائي اللغة</span><span class="en" style="display:none;">Bilingual</span></td>
+                    <td><span class="ar">العربية والإنجليزية</span><span class="en" style="display:none;">Arabic and English</span></td>
+                </tr>
+                <tr>
+                    <td>📱 <span class="ar">الجوال</span><span class="en" style="display:none;">Mobile</span></td>
+                    <td><span class="ar">يعمل بشكل مثالي على الهواتف</span><span class="en" style="display:none;">Perfect for mobile devices</span></td>
+                </tr>
+                <tr>
+                    <td>🔄 <span class="ar">التحديث التلقائي</span><span class="en" style="display:none;">Auto Refresh</span></td>
+                    <td><span class="ar">تحديثات كل 30 ثانية</span><span class="en" style="display:none;">Updates every 30 seconds</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="section">
+            <h2>🆘 <span class="ar">استكشاف الأخطاء</span><span class="en" style="display:none;">Troubleshooting</span></h2>
+            
+            <h3><span class="ar">المشكلة: "فشل في جلب المباريات"</span><span class="en" style="display:none;">Issue: "Failed to fetch matches"</span></h3>
+            <div class="step">
+                <strong><span class="ar">الحل:</span><span class="en" style="display:none;">Solution:</span></strong>
+                <ul style="margin-right: 20px; margin-top: 10px;">
+                    <li><span class="ar">تأكد من اتصالك بالإنترنت</span><span class="en" style="display:none;">Check your internet connection</span></li>
+                    <li><span class="ar">تحقق من صحة مفتاح API</span><span class="en" style="display:none;">Verify your API key is correct</span></li>
+                    <li><span class="ar">تأكد من اشتراكك المجاني نشط</span><span class="en" style="display:none;">Ensure your free subscription is active</span></li>
+                </ul>
+            </div>
+            
+            <h3><span class="ar">المشكلة: لا توجد مباريات</span><span class="en" style="display:none;">Issue: No matches showing</span></h3>
+            <div class="step">
+                <strong><span class="ar">الحل:</span><span class="en" style="display:none;">Solution:</span></strong>
+                <ul style="margin-right: 20px; margin-top: 10px;">
+                    <li><span class="ar">جرب تاريخ مختلف</span><span class="en" style="display:none;">Try a different date</span></li>
+                    <li><span class="ar">حدد دوري مختلف</span><span class="en" style="display:none;">Select a different league</span></li>
+                    <li><span class="ar">أعد تحميل الصفحة (F5)</span><span class="en" style="display:none;">Refresh the page (F5)</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="section">
+            <h2>📋 <span class="ar">الخطوات التالية</span><span class="en" style="display:none;">Next Steps</span></h2>
+            
+            <div class="step success">
+                <strong>✅ <span class="ar">تثبيت أساسي</span><span class="en" style="display:none;">Basic Setup Complete!</span></strong>
+                <p><span class="ar">الآن يمكنك:</span><span class="en" style="display:none;">Now you can:</span></p>
+                <ul style="margin-right: 20px; margin-top: 10px;">
+                    <li><span class="ar">استكشاف المباريات المباشرة</span><span class="en" style="display:none;">Explore live matches</span></li>
+                    <li><span class="ar">حفظ المباريات المفضلة</span><span class="en" style="display:none;">Save favorite matches</span></li>
+                    <li><span class="ar">عرض الترتيب والإحصائيات</span><span class="en" style="display:none;">View standings and stats</span></li>
+                    <li><span class="ar">مشاركة الرابط مع الأصدقاء</span><span class="en" style="display:none;">Share with friends</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Files Reference -->
+        <div class="section">
+            <h2>📁 <span class="ar">ملفات المشروع</span><span class="en" style="display:none;">Project Files</span></h2>
+            
+            <table>
+                <tr>
+                    <th><span class="ar">الملف</span><span class="en" style="display:none;">File</span></th>
+                    <th><span class="ar">الوصف</span><span class="en" style="display:none;">Description</span></th>
+                </tr>
+                <tr>
+                    <td>index.html</td>
+                    <td><span class="ar">الهيكل الأساسي</span><span class="en" style="display:none;">Main structure</span></td>
+                </tr>
+                <tr>
+                    <td>styles.css</td>
+                    <td><span class="ar">التنسيق والتصميم</span><span class="en" style="display:none;">Styling</span></td>
+                </tr>
+                <tr>
+                    <td>app.js</td>
+                    <td><span class="ar">المنطق والوظائف</span><span class="en" style="display:none;">Logic and functionality</span></td>
+                </tr>
+                <tr>
+                    <td>README.md</td>
+                    <td><span class="ar">التوثيق الكامل</span><span class="en" style="display:none;">Full documentation</span></td>
+                </tr>
+                <tr>
+                    <td>CONFIG.md</td>
+                    <td><span class="ar">إعدادات متقدمة</span><span class="en" style="display:none;">Advanced settings</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <span class="ar">أنشئ بـ ❤️ لعشاق كرة القدم | النسخة 1.0.0</span>
+                <span class="en" style="display:none;">Created with ❤️ for football fans | Version 1.0.0</span>
+            </p>
+            <p>
+                <span class="ar">اقرأ</span><span class="en" style="display:none;">Read</span> 
+                <a href="README.md" style="color: #4f9cff; text-decoration: none;">README.md</a>
+                <span class="ar">و</span><span class="en" style="display:none;">and</span>
+                <a href="CONFIG.md" style="color: #4f9cff; text-decoration: none;">CONFIG.md</a>
+                <span class="ar">للمزيد من المعلومات</span><span class="en" style="display:none;">for more info</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function toggleLanguage() {
+            const html = document.documentElement;
+            const currentLang = html.lang;
+            const newLang = currentLang === 'ar' ? 'en' : 'ar';
+            
+            html.lang = newLang;
+            html.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+            
+            document.querySelectorAll('.ar, .en').forEach(el => {
+                if ((el.classList.contains('ar') && newLang === 'ar') ||
+                    (el.classList.contains('en') && newLang === 'en')) {
+                    el.style.display = 'inline';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            
+            localStorage.setItem('setupLanguage', newLang);
+        }
+        
+        // Load saved language preference
+        const saved = localStorage.getItem('setupLanguage');
+        if (saved && saved !== 'ar') {
+            toggleLanguage();
+        }
+    </script>
+</body>
+</html>
